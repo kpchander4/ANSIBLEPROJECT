@@ -1,0 +1,36 @@
+---
+- name: set hostname
+  hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: populates hosts files with all hosts
+  template: src=hosts.j2 dest=/etc/hosts
+
+- name: Disallow password authentication
+  lineinfile: 
+    dest=/etc/ssh/sshd_config
+    regexp="^PasswordAuthentication"
+    line="PasswordAuthentication no"
+    state=present
+  notify: restart ssh
+
+- name: Disallow root SSH access
+  lineinfile: 
+    dest=/etc/ssh/sshd_config
+    regexp="^PermitRootLogin"
+    line="PermitRootLogin no"
+    state=present
+  notify: restart ssh
+
+- name: add ops users
+  user: name={{ item.name }} groups=wheel
+  with_items: "{{ ops_users }}"
+
+- name: create .ssh directory
+  file: path=/home/{{ item.name }}/.ssh state=directory
+  become_user: "{{ item.name }}"
+  with_items: "{{ ops_users }}"
+
+- name: download public keys from gitlab to authorized_keys
+  get_url: url=https://github.com/{{ item.github }}.keys dest=/home/{{ item.name }}/.ssh/authorized_keys owner={{ item.name }} group={{ item.name }} mode=0600 force=yes
+  with_items: "{{ ops_users }}"

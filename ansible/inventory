@@ -1,0 +1,11 @@
+[management]
+mtmg01.test.com ansible_host=10.0.0.XXX
+
+[web]
+web01.test.com ansible_host=10.0.0.XXX web=true
+
+[app]
+app01.test.com ansible_host=10.0.1.XXX app=true
+
+[database]
+db01.test.com ansible_host=10.0.2.XXX db=true

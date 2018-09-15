@@ -1,0 +1,50 @@
+---
+- name: Ensure Java is installed
+  apt: "name=openjdk-7-jdk state=present"
+
+- name: Set JAVA_HOME
+  lineinfile:
+    line: "JAVA_HOME=\"/usr\""
+    dest: /etc/environment
+
+- name: Ensure tomcat is installed
+  apt: "name=tomcat7 state=present"
+
+- name: Set CATALINA_HOME
+  lineinfile:
+    line: "CATALINA_HOME=\"/usr/share/tomcat7\""
+    dest: /etc/environment
+
+- name: Set CATALINA_BASE
+  lineinfile:
+    line: "CATALINA_BASE=\"/var/lib/tomcat7\""
+    dest: /etc/environment
+
+- name: copy opencms.war file
+  copy:
+    src: opencms.war
+    dest: /var/lib/tomcat7/webapps/opencms.war
+    mode: 0755
+  notify:
+    - restart tomcat7
+
+- name: enable AJP connector
+  copy:
+    src: server.xml
+    dest: /var/lib/tomcat7/conf/server.xml
+    mode: 0640
+  notify:
+    - restart tomcat7
+
+- name: create opencms auto install config file
+  template: src=opencms.config dest=/tmp/opencms.config
+
+- name: run opencms auto install
+  shell: java -classpath "/var/lib/tomcat7/webapps/opencms/WEB-INF/lib/*:/var/lib/tomcat7/webapps/opencms/WEB-INF/classes:/usr/share/tomcat7/lib/*" org.opencms.setup.CmsAutoSetup -path /tmp/opencms.config
+  notify:
+    - restart tomcat7
+
+- name: delete opencms config file
+  file:
+    path: /tmp/opencms.config
+    state: absent

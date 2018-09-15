@@ -1,0 +1,33 @@
+---
+- name: install apache2
+  apt: name=apache2 update_cache=yes state=latest
+
+- name: enabled mod_rewrite
+  apache2_module: name=rewrite state=present
+  notify:
+    - restart apache2
+
+- name: enabled mod_proxy
+  apache2_module: name=proxy state=present
+  notify:
+    - restart apache2
+
+- name: enabled mod_proxy_ajp
+  apache2_module: name=proxy_ajp state=present
+  notify:
+    - restart apache2
+
+- name: create virtual host file
+  template: src=web01.test.com.conf dest=/etc/apache2/sites-available/web01.test.com.conf
+
+- name: enable site web01.test.com
+  command: a2ensite web01.test.com
+  args:
+    creates: /etc/apache2/sites-enabled/web01.test.com.conf
+  notify:
+        - restart apache2
+
+- name: disable default site
+  command: a2dissite 000-default
+  notify:
+        - restart apache2

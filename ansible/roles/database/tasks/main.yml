@@ -1,0 +1,51 @@
+---
+- name: Install the MySQL packages
+  apt: name={{ item }} state=installed update_cache=yes
+  with_items:
+    - mysql-server-5.6
+    - mysql-client-5.6
+    - python-mysqldb
+    - libmysqlclient-dev
+
+- name: Update MySQL root password for all root accounts
+  mysql_user: name=root check_implicit_admin=yes host={{ item }} password="{{ mysql_root_password }}" state=present
+  with_items:
+    - "{{ ansible_nodename }}"
+    - 127.0.0.1
+    - ::1
+    - localhost
+
+- name: Copy the root credentials as .my.cnf file
+  template: src=root.cnf.j2 dest=~/.my.cnf mode=0600
+
+- name: Ensure Anonymous user(s) are not in the database
+  mysql_user:  name=''  host={{ item }} state=absent
+  with_items:
+    - localhost
+    - "{{ ansible_nodename }}"
+
+- name: Remove the test database
+  mysql_db: name=test state=absent
+  notify:
+    - restart mysql
+
+- name: change mysql listen address
+  lineinfile: 
+    dest=/etc/mysql/my.cnf 
+    regexp="^bind-address" 
+    line="bind-address = {{ ansible_default_ipv4.address }}" 
+    state=present
+  notify: restart mysql
+
+- name: Create a new database with name opencms
+  mysql_db:
+    name: opencms
+    state: present
+
+- name: Create opencms mysql user
+  mysql_user:
+    name: opencms
+    password: password
+    host: app01.test.com
+    priv: 'opencms.*:ALL'
+    state: present
